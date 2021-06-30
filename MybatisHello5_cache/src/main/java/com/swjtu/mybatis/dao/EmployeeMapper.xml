@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.swjtu.mybatis.dao.EmployeeMapper">
+	
+	<!--  配置 EhcacheCache 作为二级缓存，与可以配置参数 -->
+	 <cache type="org.mybatis.caches.ehcache.EhcacheCache">
+	 	<property name="timeToIdleSeconds" value="3600"/><!--1 hour-->
+	    <property name="timeToLiveSeconds" value="3600"/><!--1 hour-->
+	    <property name="maxEntriesLocalHeap" value="1000"/>
+	    <property name="maxEntriesLocalDisk" value="10000000"/>
+	    <property name="memoryStoreEvictionPolicy" value="LRU"/>
+	 </cache>
+	<!-- 配置二级缓存 
+	<cache eviction="FIFO" flushInterval="6000" readOnly="false" 
+			size="1024" ></cache>
+			-->
+	<!-- 
+	eviction:缓存的回收策略：
+		• LRU – 最近最少使用的：移除最长时间不被使用的对象。
+		• FIFO – 先进先出：按对象进入缓存的顺序来移除它们。
+		• SOFT – 软引用：移除基于垃圾回收器状态和软引用规则的对象。
+		• WEAK – 弱引用：更积极地移除基于垃圾收集器状态和弱引用规则的对象。
+		• 默认的是 LRU。
+	flushInterval：缓存刷新间隔
+		缓存多长时间清空一次，默认不清空，设置一个毫秒值
+	readOnly:是否只读：
+		true：只读；mybatis认为所有从缓存中获取数据的操作都是只读操作，不会修改数据。
+				 mybatis为了加快获取速度，直接就会将数据在缓存中的引用交给用户。不安全，速度快
+		false：非只读：mybatis觉得获取的数据可能会被修改。
+				mybatis会利用序列化&反序列的技术克隆一份新的数据给你。安全，速度慢
+	size：缓存存放多少元素；
+	type=""：指定自定义缓存的全类名；
+			实现Cache接口即可；
+	-->
+	
+<!-- 
+namespace:名称空间;指定为接口的全类名 
+id：唯一标识
+resultType：返回值类型
+#{id}：从传递过来的参数中取出id值
+
+public Employee getEmpById(Integer id);
+ -->
+ 	<!-- 多条记录封装一个map：Map<Integer,Employee>:键是这条记录的主键，值是记录封装后的javaBean -->
+ 	<!-- public Map<String, Employee> getEmpByLastNameLikeReturnMap(String lastName); -->
+ 	<select id="getEmpByLastNameLikeReturnMap" resultType="map">
+ 		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE last_name like #{lastName}
+ 	</select>
+ 	
+ 	<!-- public List<Employee> getEmpListByLastNameReturnListMap(String lastName);  -->
+ 	<!-- 返回结果是 List<Map> -->
+ 	<select id="getEmpListByLastNameReturnListMap" resultType="map">
+ 		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE last_name like #{lastName}
+ 	</select>	
+ 
+ 
+ 	<!-- 测试返回一条记录的map public Map<String, Object> getEmpByIdReturnMap(int id);  -->
+ 	<select id="getEmpByIdReturnMap" resultType="map">
+ 		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE id = #{id}
+ 	</select>	
+ 	
+ 	<!-- public List<Employee> getEmpListByLastName(String lastName);  -->
+ 	<!-- resultType 如果返回的是一个集合，要写集合中元素的类型 -->
+ 	<select id="getEmpListByLastName" resultType="com.swjtu.mybatis.bean.Employee">
+ 		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE last_name like #{lastName}
+ 	</select>	
+ 
+	<select id="getEmployeeId" resultType="emp" useCache="false">
+		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE id = #{aabcdefg}
+	</select>
+	
+	<!-- 添加一个员工  public void addEmp(Employee e);  -->
+	<!-- 
+		如何获取自增主键的值：
+		mysql 支持自增主键，自增主键值得获取，mybatis 也是利用 statement.getGeneratedKeys()：
+		useGeneratedKeys="true" 使用自增主键获取主键值策略，
+		keyProperty: 指定对应的主键属性，也就是mybatis获取到主键以后，将这个值封装给java bean的那个属性； 
+	 -->
+	<insert id="addEmp" useGeneratedKeys="true" keyProperty="id">
+		INSERT INTO emp_tbl ( last_name
+		       , gender
+		       , email
+	         ) VALUES ( #{lastName}
+	           , #{gender}
+	           , #{email}
+            ) 
+	</insert>
+	
+	<!-- 更新一个员工  public void updateEmp(Employee e) -->
+	<update id="updateEmp">
+		UPDATE emp_tbl
+		   SET last_name = #{lastName}
+		       , gender = #{gender}
+		       , email = #{email}
+		 WHERE id = #{id}
+	</update>
+	
+	
+	<!-- 删除一个员工  public void deleteEmp(Integer id) -->
+	<delete id="deleteEmp">
+		DELETE 
+		  FROM emp_tbl 
+		 WHERE id = #{id} 
+	</delete>
+	
+	
+	<!-- 根据id和lastName查询员工 -->
+	<select id="getEmpByIdAndLastName" resultType="com.swjtu.mybatis.bean.Employee">
+		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE id = #{id}
+		   and last_name = #{lastName}
+	</select>
+	
+	<!-- 根据 map 查询员工 -->
+	<select id="getEmpByMap" resultType="com.swjtu.mybatis.bean.Employee">
+		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM ${TABLE_NAME} 
+		 WHERE id = ${ID}
+		   and last_name = #{LAST_NAME}
+	</select>
+	
+	
+	
+</mapper>

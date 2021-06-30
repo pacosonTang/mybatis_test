@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.swjtu.mybatis.dao.EmployeeMapperPlus">
+
+	<!-- 自定义某个 java bean 的封装规则：
+		type: 自定义规则的 java类型
+	 	id：唯一id；
+	 -->
+	 <resultMap type="emp" id="myEmp">
+	 	<!-- id标签 指定主键列的封装规则 -->
+	 	<id column="id" property="id"/>
+	 	<!-- result 标签定义普通列 -->
+	 	<result column="last_name" property="lastName"/>
+	 	<!-- 
+	 		其他不指定的列会自动封装，
+	 		只要写了 resultMap，就把全部字段的映射规则都写上。
+	 	 -->
+	 	<result column="gender" property="gender"/> 
+	 </resultMap>
+	
+	<!-- public Employee getEmpById(Integer id);  -->
+	<!-- 使用resultMap设置返回结果集： 通过 id 来查询emp -->
+	<select id="getEmpByIdByResultMap" resultMap="myEmp">
+		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE id = #{id}
+	</select>
+	
+	<!-- public Employee getEmpById(Integer id);  -->
+	<!-- 使用resultType设置返回结果集： 通过 id 来查询emp -->
+	<select id="getEmpByIdByResultType" resultType="emp">
+		SELECT id AS ID
+		       , last_name AS LASTNAME
+		       , email AS EMAIL
+		       , gender AS GENDER
+		  FROM emp_tbl 
+		 WHERE id = #{id}
+	</select>
+	
+	
+	<!-- 
+	场景一：
+		查询Employee的同时查询员工对应的部门
+		Employee===Department
+		一个员工有与之对应的部门信息；
+		id  last_name  gender    d_id     did  dept_name (private Department dept;)
+	 -->
+	 <!-- 如何定义结果集封装，使用级联属性 -->
+	 <resultMap type="emp" id="myEmpWithDept">
+	 	<result column="ID" property="id"/>
+	 	<result column="LASTNAME" property="lastName"/>
+	 	<result column="EMAIL" property="email"/>
+	 	<result column="GENDER" property="gender"/>
+	 	<result column="DEPT_ID" property="depart.id"/>
+	 	<result column="DEPT_NAME" property="depart.deptName"/>
+	 </resultMap>
+	 
+	 <!-- 如何定义结果集封装，使用级联属性 -->
+	 <resultMap type="emp" id="myEmpWithDeptWithAssociation">
+	 	<result column="ID" property="id"/>
+	 	<result column="LASTNAME" property="lastName"/>
+	 	<result column="EMAIL" property="email"/>
+	 	<result column="GENDER" property="gender"/>
+	 	
+	 	<!-- 使用 association 指定联合的javaBean 对象 property="dept"，
+		 指定哪个属性是联合对象 javaType 指定这个属性对象的类型（不能省略） -->
+		 <association property="depart" javaType="com.swjtu.mybatis.bean.Department">
+		 	<result column="DEPT_NAME" property="deptName"/>
+		 	<result column="DEPT_ID" property="id"/>
+		 </association>
+	 </resultMap>
+	 
+	 
+	 <!-- // 查询员工以及部门
+	public Employee getEmpAndDept(Integer id) ; -->
+	<select id="getEmpAndDept" resultMap="myEmpWithDeptWithAssociation">
+		SELECT a.id AS ID
+		       , a.last_name AS LASTNAME
+		       , a.email AS EMAIL
+		       , a.gender AS GENDER
+		       , b.id AS DEPT_ID
+		       , b.dept_name AS DEPT_NAME
+		  FROM emp_tbl a 
+		 INNER JOIN dept_tbl b
+		    ON a.dept_id = b.id
+		 WHERE a.id = #{id}
+	</select>
+	
+	<!-- 
+		使用association 进行分步查询 
+		1. 按照员工id查询员工信息；
+		2. 根据员工信息中的 depart.id 查询部门信息；
+		3. 把查询出的部门插入到员工信息中；
+	-->
+	 <resultMap type="emp" id="myEmpWithDeptWithAssociationByStep">
+	 	<result column="ID" property="id"/>
+	 	<result column="LASTNAME" property="lastName"/>
+	 	<result column="EMAIL" property="email"/>
+	 	<result column="GENDER" property="gender"/>
+	 	
+	 	<!-- 使用 association 定义关联对象的封装规则 
+	 		 select: 表明当前 当前属性是调用select指定 的方法查询出的结果；
+	 		 column: 指定将那一列的值传递给这个方法 
+	 		 
+	 		 流程：使用select指定的方法（传入column指定的这个列参数的值）查询对象
+	 		 ，并封装给property指定的属性 
+	 	-->
+		 <association property="depart" 
+		 	select="com.swjtu.mybatis.dao.DepartMapper.getDeptById"
+		 	column="DEPT_ID">
+		 </association>
+	 </resultMap>
+	 
+	<!-- public Employee getEmpByIdStep(Integer id); -->
+	<select id="getEmpByIdStep" resultMap="myEmpWithDeptWithAssociationByStep">
+		SELECT a.id AS ID
+		       , a.last_name AS LASTNAME
+		       , a.email AS EMAIL
+		       , a.gender AS GENDER
+		       , b.id AS DEPT_ID
+		  FROM emp_tbl a 
+		 INNER JOIN dept_tbl b
+		    ON a.dept_id = b.id
+		 WHERE a.id = #{id}
+	</select>
+	
+	<!-- 可以使用延迟加载
+		 Employee => Dept:
+		 	我们每次查询Employee对象的时候， 都将一起查询出来；
+		 	部门信息在我们使用的时候再去查询；
+		 	分步查询的基础上再加上两个配置以实现延迟加载。
+	 -->
+	
+	<!--  
+		场景二：
+			查询部门的时候把对应的员工也查询出来：
+			转向 DepartmentMapper.xml 中;
+	-->
+	<resultMap type="emp" id="empPojo">
+		<result column="ID" property="id"/>
+		<result column="LASTNAME" property="lastName"/>
+		<result column="EMAIL" property="email"/>
+		<result column="GENDER" property="gender"/>
+	</resultMap>
+	
+	<!-- /* 按照部门id 查询员工列表 */ 
+	public List<Employee> getEmpListByDeptId(Integer deptId);  -->
+	<select id="getEmpListByDeptId" resultMap="empMapWithDescriminator">
+		SELECT a.id AS ID  , a.last_name AS LASTNAME , a.email AS EMAIL
+		       , a.gender AS GENDER , a.dept_id AS DEPT_ID 
+		  FROM emp_tbl a 
+		 WHERE a.dept_id = #{DEPT_ID}
+	</select>
+	
+	<!-- 鉴别器   <discriminator javaType=""></discriminator>  
+		鉴别器：mybatis 可以使用 discriminator 判断某列的值， 然后根据某列的值改变封装行为封装 employee。
+		荔枝：
+		如果是女生：就把部门信息查询出来， 否则不查询；
+		如果是男生：把last_name 这一列赋值给 email;
+	-->
+	<resultMap type="emp" id="empMapWithDescriminator">
+		<result column="ID" property="id"/>
+		<result column="LASTNAME" property="lastName"/>
+		<result column="EMAIL" property="email"/>
+		<result column="GENDER" property="gender"/>
+		
+		<!-- column 指定判定的列名
+			javaType 指定对应的java类型
+			有点类似于 switch-case 判断语句
+		 -->
+		<discriminator javaType="string" column="GENDER">
+			<!-- 女生：就把部门信息查询出来 -->
+			<case value="f" resultType="emp">
+				<association property="depart" 
+				 	select="com.swjtu.mybatis.dao.DepartMapper.getDeptById"
+				 	column="DEPT_ID">
+				 </association>
+			</case>
+			<!-- 男生：把last_name的值赋值给 email -->
+			<case value="m" resultType="emp">
+				<result column="LASTNAME" property="email"/>
+			</case>
+		</discriminator>
+	</resultMap>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+</mapper>

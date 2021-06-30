@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.swjtu.mybatis.dao.DepartMapper">
+	
+	<cache-ref namespace="com.swjtu.mybatis.dao.EmployeeMapper"/>
+	
+	<resultMap type="dept" id="deptMap">
+		<result column="ID" property="id"/>
+		<result column="DEPT_NAME" property="deptName"/>		
+	</resultMap>
+	
+	
+	<!-- 查询部门及其员工列表的sql实现 -->
+	<!-- collection 定义集合 -->
+	<!-- 
+		嵌套结果集的方式，使用 collection标签定义关联的集合类型
+		的属性封装规则。
+	 -->
+	<resultMap type="dept" id="deptMapWithEmpList">
+		<result column="DEPT_ID" property="id"/>
+		<result column="DEPT_NAME" property="deptName"/>
+		<!-- 
+			collection 定义关联集合类型的属性的封装规则
+			ofType: 指定集合里面元素的类型 
+		-->
+		<collection property="emps" ofType="emp">
+			<!-- 定义该集合中元素的封装规则 -->
+			<result column="EMP_ID" property="id"/>
+		 	<result column="LASTNAME" property="lastName"/>
+		 	<result column="EMAIL" property="email"/>
+		 	<result column="GENDER" property="gender"/>
+		</collection>
+	</resultMap> 
+	<!-- public Department getDeptAndEmpsById(Integer id); -->
+	<select id="getDeptAndEmpsById" resultMap="deptMapWithEmpList">
+		SELECT a.id AS DEPT_ID
+		       , a.dept_name AS DEPT_NAME
+		       , b.id AS EMP_ID
+		       , b.last_name AS LASTNAME
+		       , b.email AS EMAIL
+		       , b.gender AS GENDER
+		  FROM dept_tbl a
+		  inner join emp_tbl b
+		  on a.id = b.dept_id
+	   WHERE a.id = #{ID}
+	</select>
+	
+	<!-- 
+		基于 collection 标签分步查询部门及其客户列表
+	 -->
+	 <resultMap type="dept" id="deptMapAndEmpsByStep">
+	 	<result column="DEPT_ID" property="id"/>
+		<result column="DEPT_NAME" property="deptName"/>
+		<collection property="emps" 
+		    select="com.swjtu.mybatis.dao.EmployeeMapperPlus.getEmpListByDeptId"
+			column="{DEPT_ID=DEPT_ID}" fetchType="lazy">
+		</collection>
+	 </resultMap>
+	<!-- public Department getDeptByIdByStep(Integer id);  -->
+	<select id="getDeptByIdByStep" resultMap="deptMapAndEmpsByStep">
+		SELECT a.id AS DEPT_ID
+		       , a.dept_name AS DEPT_NAME
+		  FROM dept_tbl a
+	   WHERE a.id = #{ID}
+	</select>
+	
+	<!-- 
+		1）扩展：多列的值传递过去：
+		将多列的值封装到map并传递map过去；如 column="{key1=column1, key2=column2}"；
+		2： collection 标签有属性 fetchType 加载类型： lazy 延迟加载或 eager 立即加载
+	 -->
+	 
+	 <!-- * 通过id查询部门 */ 
+	 public Department getDeptById(Integer id); -->
+	<select id="getDeptById" resultMap="deptMap"
+	 	    flushCache="false">
+		SELECT id AS ID
+		       , dept_name AS DEPT_NAME
+		  FROM dept_tbl
+		 WHERE id = #{ID}     
+	</select>	
+	
+	<!-- /* 添加一个部门 */
+	public Department addDept(Integer id, String deptName); -->
+	<insert id="addDept">
+		INSERT 
+		  INTO dept_tbl 
+		       ( dept_name
+	           ) 
+        VALUES ( #{deptName}
+               )
+	</insert>
+	
+	
+	
+</mapper>

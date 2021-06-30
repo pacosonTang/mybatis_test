@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	
+	<!-- 注册插件到 mybatis全局配置中 
+	<plugins> -->
+		<!-- 第一个插件 
+		<plugin interceptor="com.swjtu.mybatis.dao.MyFirstPlugin">
+			<property name="username" value="root"/>
+			<property name="password" value="123456"/>
+		</plugin>-->
+		<!-- 第二个插件 
+		<plugin interceptor="com.swjtu.mybatis.dao.MySecondPlugin">
+		</plugin> 
+	</plugins> -->
+	<typeHandlers>
+		<!-- <typeHandler handler="org.apache.ibatis.type.EnumOrdinalTypeHandler" javaType="com.swjtu.mybatis.bean.EmpStatus"/> -->
+		<!-- 1、配置自定义的类型处理器 -->
+		<typeHandler handler="com.swjtu.mybatis.dao.MyEnumStatusTypeHandler" javaType="com.swjtu.mybatis.bean.EmpStatus"/>
+		<!-- 2、也可以在处理某个字段的时候告诉mybatis使用哪个类型处理器
+			保存：#{status, typeHandler=}
+			查询：把typeHandler 封装到 resultMap 标签中：如下：
+			<!-- 在resultMap标签中指定类型处理器 typeHandler 
+			<resultMap type="com.swjtu.mybatis.bean.Employee" id="emp">
+				<result column="id" property="id" />
+				<result column="status" property="status" typeHandler="com.swjtu.mybatis.dao.MyEnumStatusTypeHandler"/>
+			</resultMap>
+			注意：如果在参数位置修改TypeHandler，应该保证保存数据和查询数据用的TypeHandler是一样的。
+			-->
+	</typeHandlers>
+	
+	<plugins>
+	    <!-- com.github.pagehelper为PageHelper类所在包名 -->
+	    <plugin interceptor="com.github.pagehelper.PageInterceptor">
+	        <!-- 使用下面的方式配置参数，后面会有所有的参数介绍 -->
+	        <property name="param1" value="value1"/>
+		</plugin>
+	</plugins>
+	
+	<environments default="development">
+		<environment id="development">
+			<transactionManager type="JDBC"/>
+			<dataSource type="POOLED">
+				<property name="driver" value="com.mysql.jdbc.Driver"/>
+				<property name="url" value="jdbc:mysql://localhost:3306/mybatis?serverTimezone=UTC"/>
+				<property name="username" value="root"/>
+				<property name="password" value="root"/>
+			</dataSource>
+		</environment>
+	</environments>
+	<mappers>
+		<mapper resource="com\swjtu\mybatis\dao\EmployeeMapper.xml"/>
+	</mappers>
+</configuration>
